@@ -122,7 +122,20 @@ func (m MongoClient) UpdateBlog(data *blogProto.UpdateBlogRequest) (*blogProto.U
 }
 
 func (m MongoClient) DeleteBlog(data *blogProto.DeleteBlogRequest) (*blogProto.DeleteBlogResponse, error) {
-	return &blogProto.DeleteBlogResponse{}, nil
+	oid, err := primitive.ObjectIDFromHex(data.Id)
+	if err != nil {
+		return nil, twirp.NewError(twirp.InvalidArgument, "Invalid blog ID")
+	}
+	filter := bson.D{{Key: "_id", Value: oid}}
+
+	result, delete_err := Collection.DeleteOne(context.TODO(), filter)
+	if delete_err != nil || result.DeletedCount != 1 {
+		return nil, twirp.NewError(twirp.InvalidArgument, fmt.Sprintf("Unable to delete blog with ID: %v", data.Id))
+	}
+
+	return &blogProto.DeleteBlogResponse{
+		Id: data.Id,
+	}, nil
 }
 
 func (m MongoClient) ListBlog(data *blogProto.ListBlogRequest) (*blogProto.ListBlogResponse, error) {

@@ -106,7 +106,19 @@ func (p PostgresClient) UpdateBlog(data *blogProto.UpdateBlogRequest) (*blogProt
 }
 
 func (p PostgresClient) DeleteBlog(data *blogProto.DeleteBlogRequest) (*blogProto.DeleteBlogResponse, error) {
-	return &blogProto.DeleteBlogResponse{}, nil
+	sqlStatement := "DELETE FROM blogs WHERE id=$1"
+	result, err := SqlDB.Exec(sqlStatement, data.Id)
+	if err != nil {
+		return nil, twirp.NewError(twirp.InvalidArgument, fmt.Sprintf("Unable to delete blog with ID: %v, err: %v", data.Id, err))
+	}
+	rows, err := result.RowsAffected()
+	if err != nil || rows == 0 {
+		return nil, twirp.NewError(twirp.InvalidArgument, fmt.Sprintf("Unable to delete blog with ID: %v, no matching rows", data.Id))
+	}
+
+	return &blogProto.DeleteBlogResponse{
+		Id: data.Id,
+	}, nil
 }
 
 func (p PostgresClient) ListBlog(data *blogProto.ListBlogRequest) (*blogProto.ListBlogResponse, error) {
