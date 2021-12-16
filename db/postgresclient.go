@@ -70,7 +70,21 @@ func (p PostgresClient) CreateBlog(data *blogProto.CreateBlogRequest) (*blogProt
 }
 
 func (p PostgresClient) GetBlog(data *blogProto.GetBlogRequest) (*blogProto.GetBlogResponse, error) {
-	return &blogProto.GetBlogResponse{}, nil
+	var title string
+	var content string
+
+	sqlStatement := "SELECT title, content FROM blogs WHERE id=$1"
+
+	err := SqlDB.QueryRow(sqlStatement, data.Id).Scan(&title, &content)
+	if err != nil {
+		return nil, twirp.NewError(twirp.NotFound, fmt.Sprintf("No documents were found for id: %v, err: %v", data.Id, err))
+	}
+
+	return &blogProto.GetBlogResponse{
+		Id:      data.Id,
+		Title:   title,
+		Content: content,
+	}, nil
 }
 
 func (p PostgresClient) UpdateBlog(data *blogProto.UpdateBlogRequest) (*blogProto.UpdateBlogResponse, error) {

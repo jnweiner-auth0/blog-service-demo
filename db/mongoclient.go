@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/twitchtv/twirp"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -73,7 +74,29 @@ func (m MongoClient) CreateBlog(data *blogProto.CreateBlogRequest) (*blogProto.C
 }
 
 func (m MongoClient) GetBlog(data *blogProto.GetBlogRequest) (*blogProto.GetBlogResponse, error) {
-	return &blogProto.GetBlogResponse{}, nil
+	oid, err := primitive.ObjectIDFromHex(data.Id)
+	if err != nil {
+		return nil, twirp.NewError(twirp.InvalidArgument, "Invalid blog ID")
+	}
+
+	filter := bson.D{{Key: "_id", Value: oid}}
+
+	result := BlogItem{}
+
+	// Decode() method unmarshals BSON into result
+	unmarshal_err := Collection.FindOne(context.TODO(), filter).Decode(&result)
+	if unmarshal_err != nil {
+		if unmarshal_err == mongo.ErrNoDocuments {
+			return nil, twirp.NewError(twirp.NotFound, fmt.Sprintf("No documents were found for id: %v", data.Id))
+		}
+		return nil, twirp.NewError(twirp.NotFound, fmt.Sprintf("There was an error finding a blog with ID: %v \nError: %v", data.Id, unmarshal_err))
+	}
+
+	return &blogProto.GetBlogResponse{
+		Id:      data.Id,
+		Title:   result.Title,
+		Content: result.Content,
+	}, nil
 }
 
 func (m MongoClient) UpdateBlog(data *blogProto.UpdateBlogRequest) (*blogProto.UpdateBlogResponse, error) {

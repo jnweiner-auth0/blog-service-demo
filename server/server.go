@@ -19,7 +19,12 @@ func (*Server) CreateBlog(ctx context.Context, req *blogProto.CreateBlogRequest)
 }
 
 func (*Server) GetBlog(ctx context.Context, req *blogProto.GetBlogRequest) (*blogProto.GetBlogResponse, error) {
-	return &blogProto.GetBlogResponse{}, nil
+	data := &blogProto.GetBlogRequest{
+		Id: req.GetId(),
+	}
+
+	res, err := config.DB.GetBlog(data)
+	return res, err
 }
 
 func (*Server) UpdateBlog(ctx context.Context, req *blogProto.UpdateBlogRequest) (*blogProto.UpdateBlogResponse, error) {
