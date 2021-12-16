@@ -28,7 +28,14 @@ func (*Server) GetBlog(ctx context.Context, req *blogProto.GetBlogRequest) (*blo
 }
 
 func (*Server) UpdateBlog(ctx context.Context, req *blogProto.UpdateBlogRequest) (*blogProto.UpdateBlogResponse, error) {
-	return &blogProto.UpdateBlogResponse{}, nil
+	data := &blogProto.UpdateBlogRequest{
+		Id:      req.GetId(),
+		Title:   req.GetTitle(),
+		Content: req.GetContent(),
+	}
+
+	res, err := config.DB.UpdateBlog(data)
+	return res, err
 }
 
 func (*Server) DeleteBlog(ctx context.Context, req *blogProto.DeleteBlogRequest) (*blogProto.DeleteBlogResponse, error) {

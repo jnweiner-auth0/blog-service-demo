@@ -100,7 +100,25 @@ func (m MongoClient) GetBlog(data *blogProto.GetBlogRequest) (*blogProto.GetBlog
 }
 
 func (m MongoClient) UpdateBlog(data *blogProto.UpdateBlogRequest) (*blogProto.UpdateBlogResponse, error) {
-	return &blogProto.UpdateBlogResponse{}, nil
+	oid, err := primitive.ObjectIDFromHex(data.Id)
+	if err != nil {
+		return nil, twirp.NewError(twirp.InvalidArgument, "Invalid blog ID")
+	}
+
+	filter := bson.D{{Key: "_id", Value: oid}}
+
+	update := bson.D{{Key: "$set", Value: bson.M{"title": data.Title, "content": data.Content}}}
+
+	result, update_err := Collection.UpdateOne(context.TODO(), filter, update)
+	if update_err != nil || result.MatchedCount == 0 {
+		return nil, twirp.NewError(twirp.InvalidArgument, fmt.Sprintf("Blog id: %v could not be updated with %v", data.Id, data))
+	}
+
+	return &blogProto.UpdateBlogResponse{
+		Id:      oid.Hex(),
+		Title:   data.Title,
+		Content: data.Content,
+	}, nil
 }
 
 func (m MongoClient) DeleteBlog(data *blogProto.DeleteBlogRequest) (*blogProto.DeleteBlogResponse, error) {

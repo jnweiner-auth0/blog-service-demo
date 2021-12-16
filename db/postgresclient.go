@@ -88,7 +88,21 @@ func (p PostgresClient) GetBlog(data *blogProto.GetBlogRequest) (*blogProto.GetB
 }
 
 func (p PostgresClient) UpdateBlog(data *blogProto.UpdateBlogRequest) (*blogProto.UpdateBlogResponse, error) {
-	return &blogProto.UpdateBlogResponse{}, nil
+	sqlStatement := "UPDATE blogs SET title=$2, content=$3 WHERE id=$1"
+	result, err := SqlDB.Exec(sqlStatement, data.Id, data.Title, data.Content)
+	if err != nil {
+		return nil, twirp.NewError(twirp.InvalidArgument, fmt.Sprintf("Blog id: %v could not be updated with %v, err: %v", data.Id, data, err))
+	}
+	rows, err := result.RowsAffected()
+	if err != nil || rows == 0 {
+		return nil, twirp.NewError(twirp.InvalidArgument, fmt.Sprintf("Blog id: %v could not be updated with %v, no matching rows", data.Id, data))
+	}
+
+	return &blogProto.UpdateBlogResponse{
+		Id:      data.Id,
+		Title:   data.Title,
+		Content: data.Content,
+	}, nil
 }
 
 func (p PostgresClient) DeleteBlog(data *blogProto.DeleteBlogRequest) (*blogProto.DeleteBlogResponse, error) {
