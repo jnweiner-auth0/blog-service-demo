@@ -1,6 +1,7 @@
 package server
 
 import (
+	config "blog-service/config"
 	blogProto "blog-service/rpc/blog"
 	"context"
 )
@@ -8,7 +9,13 @@ import (
 type Server struct{}
 
 func (*Server) CreateBlog(ctx context.Context, req *blogProto.CreateBlogRequest) (*blogProto.CreateBlogResponse, error) {
-	return &blogProto.CreateBlogResponse{}, nil
+	data := &blogProto.CreateBlogRequest{
+		Title:   req.GetTitle(),
+		Content: req.GetContent(),
+	}
+
+	res, err := config.DB.CreateBlog(data)
+	return res, err
 }
 
 func (*Server) GetBlog(ctx context.Context, req *blogProto.GetBlogRequest) (*blogProto.GetBlogResponse, error) {

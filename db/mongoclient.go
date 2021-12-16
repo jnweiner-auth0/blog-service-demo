@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/twitchtv/twirp"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -54,7 +55,21 @@ func (m MongoClient) Connect() error {
 }
 
 func (m MongoClient) CreateBlog(data *blogProto.CreateBlogRequest) (*blogProto.CreateBlogResponse, error) {
-	return &blogProto.CreateBlogResponse{}, nil
+	res, err := Collection.InsertOne(context.Background(), data)
+	if err != nil {
+		return nil, twirp.NewError(twirp.InvalidArgument, fmt.Sprintf("There was an error creating a blog: %v", err))
+	}
+
+	// type assertion that res.InsertedID is of type primitive.ObjectID
+	oid, ok := res.InsertedID.(primitive.ObjectID)
+	if !ok {
+		return nil, twirp.NewError(twirp.InvalidArgument, fmt.Sprintf("Cannot convert to oid: %v", ok))
+	}
+	return &blogProto.CreateBlogResponse{
+		Id:      oid.Hex(),
+		Title:   data.Title,
+		Content: data.Content,
+	}, nil
 }
 
 func (m MongoClient) GetBlog(data *blogProto.GetBlogRequest) (*blogProto.GetBlogResponse, error) {

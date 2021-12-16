@@ -4,6 +4,9 @@ import (
 	blogProto "blog-service/rpc/blog"
 	"database/sql"
 	"fmt"
+	"strconv"
+
+	"github.com/twitchtv/twirp"
 
 	_ "github.com/lib/pq" // importing so drivers are registered with database/sql package, _ means we will not directly reference this package in code
 )
@@ -52,7 +55,18 @@ func (p PostgresClient) Connect() error {
 }
 
 func (p PostgresClient) CreateBlog(data *blogProto.CreateBlogRequest) (*blogProto.CreateBlogResponse, error) {
-	return &blogProto.CreateBlogResponse{}, nil
+	sqlStatement := "INSERT INTO blogs (title, content) VALUES ($1, $2) RETURNING id"
+	id := 0
+	err := SqlDB.QueryRow(sqlStatement, data.Title, data.Content).Scan(&id)
+	if err != nil {
+		return nil, twirp.NewError(twirp.InvalidArgument, fmt.Sprintf("There was an error creating a blog: %v", err))
+	}
+
+	return &blogProto.CreateBlogResponse{
+		Id:      strconv.Itoa(id),
+		Title:   data.Title,
+		Content: data.Content,
+	}, nil
 }
 
 func (p PostgresClient) GetBlog(data *blogProto.GetBlogRequest) (*blogProto.GetBlogResponse, error) {
