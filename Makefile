@@ -7,3 +7,9 @@ gen:
 
 serve:
 		go run main.go
+
+mongo:
+		go run main.go mongo
+
+postgres:
+		go run main.go postgres
