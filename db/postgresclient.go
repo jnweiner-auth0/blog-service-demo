@@ -122,5 +122,32 @@ func (p PostgresClient) DeleteBlog(data *blogProto.DeleteBlogRequest) (*blogProt
 }
 
 func (p PostgresClient) ListBlog(data *blogProto.ListBlogRequest) (*blogProto.ListBlogResponse, error) {
-	return &blogProto.ListBlogResponse{}, nil
+	sqlStatement := "SELECT * from blogs LIMIT $1"
+	rows, err := SqlDB.Query(sqlStatement, data.Limit)
+	if err != nil {
+		return nil, twirp.NewError(twirp.NotFound, fmt.Sprintf("There was an error listing blogs: %v", err))
+	}
+	defer rows.Close()
+
+	blogs := []*blogProto.CreateBlogResponse{}
+
+	for rows.Next() {
+		var id int
+		var title string
+		var content string
+		err := rows.Scan(&id, &content, &title)
+		if err != nil {
+			return nil, twirp.NewError(twirp.NotFound, fmt.Sprintf("There was an error with blog id: %v, err: %v", id, err))
+		}
+		blog := blogProto.CreateBlogResponse{
+			Id:      strconv.Itoa(id),
+			Title:   title,
+			Content: content,
+		}
+		blogs = append(blogs, &blog)
+	}
+
+	return &blogProto.ListBlogResponse{
+		Blogs: blogs,
+	}, nil
 }

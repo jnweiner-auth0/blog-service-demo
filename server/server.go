@@ -48,5 +48,16 @@ func (*Server) DeleteBlog(ctx context.Context, req *blogProto.DeleteBlogRequest)
 }
 
 func (*Server) ListBlog(ctx context.Context, req *blogProto.ListBlogRequest) (*blogProto.ListBlogResponse, error) {
-	return &blogProto.ListBlogResponse{}, nil
+	limit := int64(25)
+
+	if req.GetLimit() > 0 {
+		limit = req.GetLimit()
+	}
+
+	data := &blogProto.ListBlogRequest{
+		Limit: limit,
+	}
+
+	res, err := config.DB.ListBlog(data)
+	return res, err
 }

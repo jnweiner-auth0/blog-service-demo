@@ -139,5 +139,38 @@ func (m MongoClient) DeleteBlog(data *blogProto.DeleteBlogRequest) (*blogProto.D
 }
 
 func (m MongoClient) ListBlog(data *blogProto.ListBlogRequest) (*blogProto.ListBlogResponse, error) {
-	return &blogProto.ListBlogResponse{}, nil
+	filter := bson.D{}
+
+	options := &options.FindOptions{
+		Limit: &data.Limit,
+	}
+
+	var results []BlogItem
+
+	cursor, find_err := Collection.Find(context.TODO(), filter, options)
+	if find_err != nil {
+		if find_err == mongo.ErrNoDocuments {
+			return nil, twirp.NewError(twirp.NotFound, "No documents were found")
+		}
+		return nil, twirp.NewError(twirp.NotFound, fmt.Sprintf("There was an error listing blogs: %v", find_err))
+	}
+
+	if find_err := cursor.All(context.TODO(), &results); find_err != nil {
+		fmt.Printf("error: %v", find_err)
+	}
+
+	blogs := []*blogProto.CreateBlogResponse{}
+
+	for _, result := range results {
+		blog := blogProto.CreateBlogResponse{
+			Id:      result.Id.Hex(),
+			Title:   result.Title,
+			Content: result.Content,
+		}
+		blogs = append(blogs, &blog)
+	}
+
+	return &blogProto.ListBlogResponse{
+		Blogs: blogs,
+	}, nil
 }
