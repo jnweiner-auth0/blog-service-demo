@@ -8,6 +8,8 @@ import (
 
 type Server struct{}
 
+// use the BlogService interface generated in service.twirp.go as guideline to stub out the expected functions
+
 func (*Server) CreateBlog(ctx context.Context, req *blogProto.CreateBlogRequest) (*blogProto.CreateBlogResponse, error) {
 	data := &blogProto.CreateBlogRequest{
 		Title:   req.GetTitle(),

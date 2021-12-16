@@ -30,10 +30,12 @@ func startServer() {
 }
 
 func main() {
+	// allows us to set db based on command line argument, defaults to mongo
 	db := "mongo"
 	if len(os.Args) > 1 {
 		db = os.Args[1]
 	}
 	config.SetDB(db)
+
 	startServer()
 }
