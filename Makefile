@@ -13,3 +13,6 @@ mongo:
 
 postgres:
 		go run main.go postgres
+
+test:
+		go test ./server/server_test.go
