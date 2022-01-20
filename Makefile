@@ -9,10 +9,12 @@ serve:
 		go run main.go
 
 mongo:
-		go run main.go mongo
+		export DB_ENGINE="mongo" && \
+    go run main.go
 
 postgres:
-		go run main.go postgres
+		export DB_ENGINE="postgres" && \
+		go run main.go
 
 test:
 		go test ./server/server_test.go

@@ -1,31 +1,28 @@
 package config
 
 import (
-	db "blog-service/db"
-	blogProto "blog-service/rpc/blog"
-	"log"
+	"fmt"
+
+	"github.com/kelseyhightower/envconfig"
 )
 
-var DB DBClient
-var Port = 5050
+var Conf *Configuration
 
-type DBClient interface {
-	Connect() error
-	CreateBlog(*blogProto.CreateBlogRequest) (*blogProto.CreateBlogResponse, error)
-	GetBlog(*blogProto.GetBlogRequest) (*blogProto.GetBlogResponse, error)
-	UpdateBlog(*blogProto.UpdateBlogRequest) (*blogProto.UpdateBlogResponse, error)
-	DeleteBlog(*blogProto.DeleteBlogRequest) (*blogProto.DeleteBlogResponse, error)
-	ListBlog(*blogProto.ListBlogRequest) (*blogProto.ListBlogResponse, error)
+type Configuration struct {
+	Port     int    `envconfig:"PORT" default:"5050"`
+	DBEngine string `envconfig:"DB_ENGINE" default:"mongo"`
 }
 
-func SetDB(dbToUse string) {
-	if dbToUse == "postgres" {
-		DB = db.NewPostgresClient()
-	} else {
-		DB = db.NewMongoClient()
-	}
-	err := DB.Connect()
+func GetConfiguration() *Configuration {
+	return Conf
+}
+
+func init() {
+	var c Configuration
+	err := envconfig.Process("", &c)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("err in config, %v", err)
+		panic("error initializing config")
 	}
+	Conf = &c
 }

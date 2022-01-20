@@ -1,55 +1,73 @@
+//go:generate mockgen -destination mock/server_mock.go -package mock blog-service/server DBClient
+
 package server
 
 import (
-	config "blog-service/config"
 	blogProto "blog-service/rpc/blog"
 	"context"
 )
 
-type Server struct{}
+type DBClient interface {
+	Connect() error
+	CreateBlog(*blogProto.CreateBlogRequest) (*blogProto.CreateBlogResponse, error)
+	GetBlog(*blogProto.GetBlogRequest) (*blogProto.GetBlogResponse, error)
+	UpdateBlog(*blogProto.UpdateBlogRequest) (*blogProto.UpdateBlogResponse, error)
+	DeleteBlog(*blogProto.DeleteBlogRequest) (*blogProto.DeleteBlogResponse, error)
+	ListBlog(*blogProto.ListBlogRequest) (*blogProto.ListBlogResponse, error)
+}
+
+type Server struct {
+	db DBClient
+}
+
+func NewServer(db DBClient) *Server {
+	return &Server{
+		db: db,
+	}
+}
 
 // use the BlogService interface generated in service.twirp.go as guideline to stub out the expected functions
 
-func (*Server) CreateBlog(ctx context.Context, req *blogProto.CreateBlogRequest) (*blogProto.CreateBlogResponse, error) {
+func (s *Server) CreateBlog(ctx context.Context, req *blogProto.CreateBlogRequest) (*blogProto.CreateBlogResponse, error) {
 	data := &blogProto.CreateBlogRequest{
 		Title:   req.GetTitle(),
 		Content: req.GetContent(),
 	}
 
-	res, err := config.DB.CreateBlog(data)
+	res, err := s.db.CreateBlog(data)
 	return res, err
 }
 
-func (*Server) GetBlog(ctx context.Context, req *blogProto.GetBlogRequest) (*blogProto.GetBlogResponse, error) {
+func (s *Server) GetBlog(ctx context.Context, req *blogProto.GetBlogRequest) (*blogProto.GetBlogResponse, error) {
 	data := &blogProto.GetBlogRequest{
 		Id: req.GetId(),
 	}
 
-	res, err := config.DB.GetBlog(data)
+	res, err := s.db.GetBlog(data)
 	return res, err
 }
 
-func (*Server) UpdateBlog(ctx context.Context, req *blogProto.UpdateBlogRequest) (*blogProto.UpdateBlogResponse, error) {
+func (s *Server) UpdateBlog(ctx context.Context, req *blogProto.UpdateBlogRequest) (*blogProto.UpdateBlogResponse, error) {
 	data := &blogProto.UpdateBlogRequest{
 		Id:      req.GetId(),
 		Title:   req.GetTitle(),
 		Content: req.GetContent(),
 	}
 
-	res, err := config.DB.UpdateBlog(data)
+	res, err := s.db.UpdateBlog(data)
 	return res, err
 }
 
-func (*Server) DeleteBlog(ctx context.Context, req *blogProto.DeleteBlogRequest) (*blogProto.DeleteBlogResponse, error) {
+func (s *Server) DeleteBlog(ctx context.Context, req *blogProto.DeleteBlogRequest) (*blogProto.DeleteBlogResponse, error) {
 	data := &blogProto.DeleteBlogRequest{
 		Id: req.GetId(),
 	}
 
-	res, err := config.DB.DeleteBlog(data)
+	res, err := s.db.DeleteBlog(data)
 	return res, err
 }
 
-func (*Server) ListBlog(ctx context.Context, req *blogProto.ListBlogRequest) (*blogProto.ListBlogResponse, error) {
+func (s *Server) ListBlog(ctx context.Context, req *blogProto.ListBlogRequest) (*blogProto.ListBlogResponse, error) {
 	limit := int64(25)
 
 	if req.GetLimit() > 0 {
@@ -60,6 +78,6 @@ func (*Server) ListBlog(ctx context.Context, req *blogProto.ListBlogRequest) (*b
 		Limit: limit,
 	}
 
-	res, err := config.DB.ListBlog(data)
+	res, err := s.db.ListBlog(data)
 	return res, err
 }

@@ -1,61 +1,97 @@
 package server_test
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
+	blogProto "blog-service/rpc/blog"
+	"blog-service/server"
+	"blog-service/server/mock"
+	"context"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/golang/mock/gomock"
 )
 
-type BlogResponse struct {
-	Id      string `json:"_id"`
-	Title   string `json:"title"`
-	Content string `json:"content"`
-}
+func TestServer(t *testing.T) {
 
-var SubjectId string
-var BaseURL string = "http://localhost:5050/twirp/service.BlogService"
+	// best way to set up a before each?
+	mockCtrl := gomock.NewController(t)
+	defer mockCtrl.Finish()
 
-// note: NOT unit tests, more to demonstrate how to write tests in Golang
-func TestServer_Create_And_Delete(t *testing.T) {
-	t.Parallel()
-	values := map[string]string{"title": "Test title", "content": "Test content"}
+	mockDBClient := mock.NewMockDBClient(mockCtrl)
 
-	json_data, err := json.Marshal(values)
-	if err != nil {
-		log.Fatalf("There was an error marshalling JSON: %v", err)
-	}
+	testServer := server.NewServer(mockDBClient)
 
-	createRes, err := http.Post(fmt.Sprintf("%s/CreateBlog", BaseURL), "application/json", bytes.NewBuffer(json_data))
-	if err != nil {
-		log.Fatalf("There was an error POSTing JSON to localhost:5050: %v", err)
-	}
+	t.Run("CreateBlog() calls DBClient.CreateBlog() with expected data", func(t *testing.T) {
+		testBlog := &blogProto.CreateBlogRequest{
+			Title:   "Test title",
+			Content: "Test content",
+		}
+		testResult := &blogProto.CreateBlogResponse{
+			Id:      "1",
+			Title:   "Test title",
+			Content: "Test content",
+		}
+		mockDBClient.EXPECT().CreateBlog(testBlog).Return(testResult, nil).Times(1)
 
-	var createResDecoded BlogResponse
+		testServer.CreateBlog(context.Background(), testBlog)
+	})
 
-	json.NewDecoder(createRes.Body).Decode(&createResDecoded)
-	SubjectId = createResDecoded.Id
+	t.Run("DeleteBlog() calls DBClient.DeleteBlog() with expected data", func(t *testing.T) {
+		testBlog := &blogProto.DeleteBlogRequest{
+			Id: "1",
+		}
+		testResult := &blogProto.DeleteBlogResponse{
+			Id: "1",
+		}
+		mockDBClient.EXPECT().DeleteBlog(testBlog).Return(testResult, nil).Times(1)
+		testServer.DeleteBlog(context.TODO(), testBlog)
+	})
 
-	require.NoError(t, err)
+	t.Run("UpdateBlog() calls DBClient.UpdateBlog() with expected data", func(t *testing.T) {
+		testBlog := &blogProto.UpdateBlogRequest{
+			Id:      "1",
+			Title:   "Test title",
+			Content: "Test content",
+		}
+		testResult := &blogProto.UpdateBlogResponse{
+			Id:      "1",
+			Title:   "Test title",
+			Content: "Test content",
+		}
+		mockDBClient.EXPECT().UpdateBlog(testBlog).Return(testResult, nil).Times(1)
+		testServer.UpdateBlog(context.Background(), testBlog)
+	})
 
-	blog_delete := map[string]string{"id": SubjectId}
-	json_delete, err := json.Marshal(blog_delete)
-	if err != nil {
-		log.Fatalf("There was an error marshalling JSON: %v", err)
-	}
+	t.Run("GetBlog() calls DBClient.GetBlog() with expected data", func(t *testing.T) {
+		testBlog := &blogProto.GetBlogRequest{
+			Id: "1",
+		}
+		testResult := &blogProto.GetBlogResponse{
+			Id:      "1",
+			Title:   "Test title",
+			Content: "Test content",
+		}
+		mockDBClient.EXPECT().GetBlog(testBlog).Return(testResult, nil).Times(1)
+		testServer.GetBlog(context.Background(), testBlog)
+	})
 
-	deleteRes, err := http.Post(fmt.Sprintf("%s/DeleteBlog", BaseURL), "application/json", bytes.NewBuffer(json_delete))
-	if err != nil {
-		log.Fatalf("There was an error deleting the blog post: %v", err)
-	}
+	t.Run("ListBlog() calls DBClient.ListBlog() with given Limit if Limit provided", func(t *testing.T) {
+		testBlogWithLimit := &blogProto.ListBlogRequest{
+			Limit: 10,
+		}
+		testResult := &blogProto.ListBlogResponse{
+			Blogs: []*blogProto.CreateBlogResponse{},
+		}
+		mockDBClient.EXPECT().ListBlog(testBlogWithLimit).Return(testResult, nil).Times(1)
+		testServer.ListBlog(context.Background(), testBlogWithLimit)
+	})
 
-	var deleteResDecoded BlogResponse
-	json.NewDecoder(deleteRes.Body).Decode(&deleteResDecoded)
+	t.Run("ListBlog() calls DBClient.ListBlog() with Limit: 25 if no Limit provided", func(t *testing.T) {
+		testBlogWithoutLimit := &blogProto.ListBlogRequest{}
+		testResult := &blogProto.ListBlogResponse{
+			Blogs: []*blogProto.CreateBlogResponse{},
+		}
+		mockDBClient.EXPECT().ListBlog(&blogProto.ListBlogRequest{Limit: 25}).Return(testResult, nil).Times(1)
+		testServer.ListBlog(context.Background(), testBlogWithoutLimit)
+	})
 
-	require.True(t, deleteResDecoded.Id == SubjectId)
-	require.NoError(t, err)
 }
